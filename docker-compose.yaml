@@ -9,6 +9,7 @@ services:
     env_file:
       - .env   # ← carrega tudo do arquivo .env
     environment:
+      api.cors.urls: ${CORS_URLS}
       spring.datasource.url: ${DB_URL}
       spring.datasource.username: ${DB_USER}
       spring.datasource.password: ${DB_PASSWORD}

@@ -27,7 +27,7 @@ public class GeminiAiService {
 
     public String createCards(String textFromPdf) {
         // URL Corrigida e Definitiva para o modelo Flash
-        String url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-lite-001:generateContent?key=" + apiKey;
+        String url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite:generateContent?key=" + apiKey;
 
         String prompt = """
                 Você é um especialista em técnicas de estudo e repetição espaçada (Anki/Flashcards).

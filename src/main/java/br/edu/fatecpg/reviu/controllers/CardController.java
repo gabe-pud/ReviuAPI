@@ -169,6 +169,14 @@ public class CardController {
             summary = "Gera cartas a partir de um arquivo PDF",
             description = "Extrai o texto de um PDF enviado e gera cartas automaticamente utilizando IA."
     )
+    @io.swagger.v3.oas.annotations.parameters.RequestBody(
+            description = "Arquivo PDF contendo o conteúdo para gerar cartas.",
+            required = true,
+            content = @io.swagger.v3.oas.annotations.media.Content(
+                    mediaType = "application/pdf",
+                    schema = @io.swagger.v3.oas.annotations.media.Schema(type = "string", format = "binary")
+            )
+    )
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Cartas geradas com sucesso a partir do PDF"),
             @ApiResponse(responseCode = "400", description = "Arquivo inválido ou falha na extração do texto")
