@@ -24,11 +24,12 @@ public class DeckService {
 
         Deck deck = new Deck();
         deck.setName(request.name());
+        deck.setColor(request.color());
         deck.setUser(user);
 
 
         deckRepository.save(deck);
-        return new DeckResponseDTO(deck.getId(), deck.getName(), null);
+        return new DeckResponseDTO(deck.getId(), deck.getName(), deck.getColor(), null);
     }
 
     //VIEW
@@ -55,6 +56,7 @@ public class DeckService {
         }
 
         deck.setName(request.name());
+        deck.setColor(request.color());
         deckRepository.save(deck);
         return new DeckResponseDTO(deck);
     }
