@@ -17,9 +17,10 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.multipart.MultipartFile;
+import br.edu.fatecpg.reviu.domain.user.User;
 
-import java.io.File;
 import java.io.IOException;
 import java.util.List;
 
@@ -46,10 +47,11 @@ public class CardController {
             @ApiResponse(responseCode = "400", description = "Dados inválidos"),
             @ApiResponse(responseCode = "404", description = "Deck não encontrado")
     })
-    public ResponseEntity<CardResponseDTO> createCard(@PathVariable Long deckId, @RequestBody CardRequestDTO request){
+    public ResponseEntity<CardResponseDTO> createCard(@PathVariable Long deckId, @AuthenticationPrincipal User user, @RequestBody CardRequestDTO request){
 
-        Card newCard = cardService.createCard(deckId, request);
-        return ResponseEntity.status(HttpStatus.CREATED).body(new CardResponseDTO(newCard));
+        Card newCard = cardService.createCard(deckId, user.getId(), request);
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(new CardResponseDTO(newCard, cardService.getReview(newCard.getId(), user.getId())));
     }
 
     @GetMapping
@@ -61,10 +63,11 @@ public class CardController {
             @ApiResponse(responseCode = "200", description = "Lista retornada com sucesso"),
             @ApiResponse(responseCode = "404", description = "Deck não encontrado")
     })
-    public ResponseEntity<List<CardResponseDTO>> getCardByDeck(@PathVariable Long deckId){
+    public ResponseEntity<List<CardResponseDTO>> getCardByDeck(@PathVariable Long deckId, @AuthenticationPrincipal User user){
 
         List<Card> cards= cardService.getCardByDeck(deckId);
-        List<CardResponseDTO> response= cards.stream().map(CardResponseDTO::new).toList();
+        List<CardResponseDTO> response= cards.stream()
+                .map(card -> new CardResponseDTO(card, cardService.getReview(card.getId(), user.getId()))).toList();
         return ResponseEntity.ok(response);
     }
 
@@ -78,16 +81,16 @@ public class CardController {
             @ApiResponse(responseCode = "400", description = "Dados inválidos"),
             @ApiResponse(responseCode = "404", description = "Deck ou card não encontrado")
     })
-    public ResponseEntity<CardResponseDTO> updateCard(@PathVariable Long deckId, @PathVariable Long cardId, @RequestBody CardRequestDTO request){
+    public ResponseEntity<CardResponseDTO> updateCard(@PathVariable Long deckId, @PathVariable Long cardId, @AuthenticationPrincipal User user, @RequestBody CardRequestDTO request){
 
         Card updateCard = cardService.updateCard(deckId, cardId, request);
-        return ResponseEntity.ok(new CardResponseDTO(updateCard));
+        return ResponseEntity.ok(new CardResponseDTO(updateCard, cardService.getReview(cardId, user.getId())));
     }
 
     @DeleteMapping("/{cardId}")
     @Operation(
             summary = "Remove um card",
-            description = "Exclui permanentemente um card de um deck."
+            description = "Remove a associação do card com o deck, preservando o card para outros decks compartilhados."
     )
     @ApiResponses({
             @ApiResponse(responseCode = "204", description = "Card removido com sucesso"),
@@ -110,10 +113,10 @@ public class CardController {
             @ApiResponse(responseCode = "400", description = "Nota de qualidade inválida"),
             @ApiResponse(responseCode = "404", description = "Card não encontrado")
     })
-    public ResponseEntity<CardResponseDTO> reviewCard(@PathVariable Long cardId, @RequestBody ReviewRequestDTO request){
+    public ResponseEntity<CardResponseDTO> reviewCard(@PathVariable Long cardId, @AuthenticationPrincipal User user, @RequestBody ReviewRequestDTO request){
 
-        Card reviewCard = cardService.reviewCard(cardId, request.quality());
-        return ResponseEntity.ok(new CardResponseDTO(reviewCard));
+        var review = cardService.reviewCard(cardId, user.getId(), request.quality());
+        return ResponseEntity.ok(new CardResponseDTO(review.getCard(), review));
     }
 
     @GetMapping("/due")
@@ -125,10 +128,11 @@ public class CardController {
             @ApiResponse(responseCode = "200", description = "Lista retornada com sucesso"),
             @ApiResponse(responseCode = "404", description = "Deck não encontrado")
     })
-    public ResponseEntity<List<CardResponseDTO>> getDueCards(@PathVariable Long deckId){
+    public ResponseEntity<List<CardResponseDTO>> getDueCards(@PathVariable Long deckId, @AuthenticationPrincipal User user){
 
-       List<Card> dueCards = cardService.getDueCards(deckId);
-       return ResponseEntity.ok(dueCards.stream().map(CardResponseDTO::new).toList());
+       List<Card> dueCards = cardService.getDueCards(deckId, user.getId());
+       return ResponseEntity.ok(dueCards.stream()
+               .map(card -> new CardResponseDTO(card, cardService.getReview(card.getId(), user.getId()))).toList());
     }
 
     @PostMapping(value = "/upload", consumes = "multipart/form-data")
@@ -157,10 +161,12 @@ public class CardController {
     })
     public ResponseEntity<List<CardResponseDTO>> createMany(
             @PathVariable Long deckId,
+            @AuthenticationPrincipal User user,
             @RequestBody List<CardRequestDTO> requests
     ) {
-        List<Card> cards = cardService.createManyCards(deckId, requests);
-        List<CardResponseDTO> response= cards.stream().map(CardResponseDTO::new).toList();
+        List<Card> cards = cardService.createManyCards(deckId, user.getId(), requests);
+        List<CardResponseDTO> response= cards.stream()
+                .map(card -> new CardResponseDTO(card, cardService.getReview(card.getId(), user.getId()))).toList();
         return ResponseEntity.ok(response);
     }
 

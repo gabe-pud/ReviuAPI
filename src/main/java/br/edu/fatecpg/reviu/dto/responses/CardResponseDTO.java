@@ -1,6 +1,7 @@
 package br.edu.fatecpg.reviu.dto.responses;
 
 import br.edu.fatecpg.reviu.domain.card.Card;
+import br.edu.fatecpg.reviu.domain.card.CardReview;
 import io.swagger.v3.oas.annotations.media.Schema;
 
 import java.time.LocalDate;
@@ -37,14 +38,18 @@ public record CardResponseDTO(
 
 ) {
     public CardResponseDTO(Card card){
+        this(card, null);
+    }
+
+    public CardResponseDTO(Card card, CardReview review){
         this(
                 card.getId(),
                 card.getFrontText(),
                 card.getBackText(),
-                card.getRepetitions(),
-                card.getInterval(),
-                card.getEasinessFactor(),
-                card.getNextReview(),
+                review != null ? review.getRepetitions() : 0,
+                review != null ? review.getInterval() : 1,
+                review != null ? review.getEasinessFactor() : 2.5,
+                review != null ? review.getNextReview() : null,
                 card.getImageUrl(),
                 card.getAudioUrl()
         );

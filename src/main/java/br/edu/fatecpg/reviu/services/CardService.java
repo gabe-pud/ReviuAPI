@@ -1,14 +1,19 @@
 package br.edu.fatecpg.reviu.services;
 
 import br.edu.fatecpg.reviu.domain.card.Card;
+import br.edu.fatecpg.reviu.domain.card.CardReview;
 import br.edu.fatecpg.reviu.domain.deck.Deck;
+import br.edu.fatecpg.reviu.domain.user.User;
 import br.edu.fatecpg.reviu.dto.requests.CardRequestDTO;
 import br.edu.fatecpg.reviu.integration.DictionaryAPIService;
 import br.edu.fatecpg.reviu.repositories.CardRepository;
+import br.edu.fatecpg.reviu.repositories.CardReviewRepository;
 import br.edu.fatecpg.reviu.repositories.DeckRepository;
+import br.edu.fatecpg.reviu.repositories.UserRepository;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -17,197 +22,154 @@ import java.util.List;
 @RequiredArgsConstructor
 public class CardService {
     private final CardRepository cardRepository;
+    private final CardReviewRepository cardReviewRepository;
     private final DeckRepository deckRepository;
-    private final DictionaryAPIService  dictionaryAPIService;
+    private final UserRepository userRepository;
+    private final DictionaryAPIService dictionaryAPIService;
 
-    //CREATE
-    private Card buildCard(Deck deck, CardRequestDTO request) {
-
+    private Card buildCard(CardRequestDTO request) {
         Card card = new Card();
         card.setFrontText(request.frontText());
         card.setBackText(request.backText());
-        card.setDeck(deck);
-
         card.setImageUrl(request.imageUrl());
         card.setAudioUrl(request.audioUrl());
 
-        // Só tenta buscar áudio se o usuário NÃO mandou um
-        if (request.audioUrl() == null) {
-
-            String word = request.frontText().trim();
-
-            // Se a palavra é válida para a Dictionary API
-            if (isValidDictionaryWord(word)) {
-
-                // Então puxa o áudio
-                String audioUrl = dictionaryAPIService.getFirstAudioUrl(word);
-
-                card.setAudioUrl(audioUrl);
-            }
+        if (request.audioUrl() == null && isValidDictionaryWord(request.frontText())) {
+            card.setAudioUrl(dictionaryAPIService.getFirstAudioUrl(request.frontText().trim()));
         }
-
-        card.setRepetitions(0);
-        card.setInterval(1);
-        card.setEasinessFactor(2.5);
-        card.setNextReview(LocalDate.now());
-
         return card;
     }
 
-
-    public Card createCard(Long deckId, CardRequestDTO request) {
-        Deck deck = deckRepository.findById(deckId)
-                .orElseThrow(() -> new EntityNotFoundException("Deck not found"));
-
-        Card card = buildCard(deck, request);
-
-        return cardRepository.save(card);
+    @Transactional
+    public Card createCard(Long deckId, Long userId, CardRequestDTO request) {
+        Deck deck = findDeck(deckId);
+        Card card = cardRepository.save(buildCard(request));
+        deck.getCards().add(card);
+        deckRepository.save(deck);
+        createReviewIfMissing(userId, card);
+        return card;
     }
 
-    public List<Card> createManyCards(Long deckId, List<CardRequestDTO> requests) {
-        Deck deck = deckRepository.findById(deckId)
-                .orElseThrow(() -> new EntityNotFoundException("Deck not found"));
-
-        List<Card> cards = requests.stream()
-                .map(req -> buildCard(deck, req))
-                .toList();
-
-        return cardRepository.saveAll(cards);
+    @Transactional
+    public List<Card> createManyCards(Long deckId, Long userId, List<CardRequestDTO> requests) {
+        Deck deck = findDeck(deckId);
+        List<Card> cards = cardRepository.saveAll(requests.stream().map(this::buildCard).toList());
+        deck.getCards().addAll(cards);
+        deckRepository.save(deck);
+        cards.forEach(card -> createReviewIfMissing(userId, card));
+        return cards;
     }
 
-
-    //VIEW
     public List<Card> getCardByDeck(Long deckId) {
-        Deck deck = deckRepository.findById(deckId)
-                .orElseThrow(() -> new RuntimeException("Deck not found"));
-
+        findDeck(deckId);
         return cardRepository.findByDeckId(deckId);
     }
 
-    //UPDATE
+    @Transactional
     public Card updateCard(Long deckId, Long cardId, CardRequestDTO request) {
-        Deck deck = deckRepository.findById(deckId)
-                .orElseThrow(() -> new RuntimeException("Deck not found"));
+        Deck deck = findDeck(deckId);
+        Card card = findCard(cardId);
+        ensureInDeck(deck, card);
 
-        Card card = cardRepository.findById(cardId)
-                .orElseThrow(() -> new RuntimeException("Card not found"));
-
-        if (!card.getDeck().getId().equals(deckId)) {
-            throw new IllegalArgumentException("This card does not belong to this deck");
-        }
-
-        // Atualiza frontText se o usuário mandou
-        if (request.frontText() != null) {
-            card.setFrontText(request.frontText());
-        }
-
-        // Atualiza backText se o usuário mandou
-        if (request.backText() != null) {
-            card.setBackText(request.backText());
-        }
-
-        // Atualiza imagem apenas se o usuário mandou alguma imagem
-        if (request.imageUrl() != null) {
-            card.setImageUrl(request.imageUrl());
-        }
-
-        // -------- ÁUDIO --------
+        if (request.frontText() != null) card.setFrontText(request.frontText());
+        if (request.backText() != null) card.setBackText(request.backText());
+        if (request.imageUrl() != null) card.setImageUrl(request.imageUrl());
         if (request.audioUrl() != null) {
-            // Usuário mandou explicitamente → substitui
             card.setAudioUrl(request.audioUrl());
-
-        } else if (request.frontText() != null) {
-            // Usuário mudou o frontText → tentar pegar novo áudio
-            String word = request.frontText().trim();
-
-            if (isValidDictionaryWord(word)) {
-                String audio = dictionaryAPIService.getFirstAudioUrl(word);
-                card.setAudioUrl(audio);
-            }
+        } else if (request.frontText() != null && isValidDictionaryWord(request.frontText())) {
+            card.setAudioUrl(dictionaryAPIService.getFirstAudioUrl(request.frontText().trim()));
         }
-        // Se audioUrl e frontText NÃO foram enviados → mantém o áudio atual
-
         return cardRepository.save(card);
     }
 
-
-    //DELETE
-    public void deleteCard(Long deckId, Long cardId){
-        Deck deck = deckRepository.findById(deckId)
-                .orElseThrow(() -> new RuntimeException("Deck not found"));
-
-        Card card = cardRepository.findById(cardId)
-                .orElseThrow(() -> new RuntimeException("Card not found"));
-
-        if (!card.getDeck().getId().equals(deck.getId())){
-            throw new IllegalArgumentException("This card does not belong to this deck");
-        }
-
-        cardRepository.delete(card);
+    @Transactional
+    public void deleteCard(Long deckId, Long cardId) {
+        Deck deck = findDeck(deckId);
+        Card card = findCard(cardId);
+        ensureInDeck(deck, card);
+        deck.getCards().removeIf(item -> item.getId().equals(cardId));
+        deckRepository.save(deck);
     }
 
-    //LÓGICA DIFICULDADE & INTERVALO
-    public void processReview(Card card, int quality) {
+    @Transactional
+    public CardReview reviewCard(Long cardId, Long userId, int quality) {
+        if (quality < 0 || quality > 5) throw new IllegalArgumentException("Quality must be between 0 and 5");
+        Card card = findCard(cardId);
+        CardReview review = cardReviewRepository.findByUserIdAndCardId(userId, cardId)
+                .orElseGet(() -> createReviewIfMissing(userId, card));
+        processReview(review, quality);
+        return cardReviewRepository.save(review);
+    }
 
-        double ef = card.getEasinessFactor();
-        int repetitions = card.getRepetitions();
-        int interval = card.getInterval();
+    @Transactional
+    public List<Card> getDueCards(Long deckId, Long userId) {
+        List<Card> cards = getCardByDeck(deckId);
+        List<Long> cardIds = cards.stream().map(Card::getId).toList();
+        cards.forEach(card -> createReviewIfMissing(userId, card));
+        List<CardReview> dueReviews = cardReviewRepository
+                .findByUserIdAndCardIdInAndNextReviewLessThanEqual(userId, cardIds, LocalDate.now());
+        return dueReviews.stream().map(CardReview::getCard).toList();
+    }
 
-        // 1. Reseta se quality < 3 (erro sério)
+    public CardReview getReview(Long cardId, Long userId) {
+        return cardReviewRepository.findByUserIdAndCardId(userId, cardId).orElse(null);
+    }
+
+    private void processReview(CardReview review, int quality) {
+        double ef = review.getEasinessFactor();
+        int repetitions = review.getRepetitions();
+        int interval = review.getInterval();
+
         if (quality < 3) {
             repetitions = 0;
-            interval = 1; // revisa amanhã
-        }
-        else {
-            // acerto
+            interval = 1;
+        } else {
             repetitions++;
-
-            if (repetitions == 1) {
-                interval = 1; // 1º acerto
-            } else if (repetitions == 2) {
-                interval = 6; // 2º acerto
-            } else {
-                interval = (int) Math.round(interval * ef);
-            }
-
-            // cálculo do easiness factor
-            ef = ef + (0.1 - (5 - quality) * (0.08 + (5 - quality) * 0.02));
-            if (ef < 1.3)
-                ef = 1.3;
+            if (repetitions == 1) interval = 1;
+            else if (repetitions == 2) interval = 6;
+            else interval = (int) Math.round(interval * ef);
+            ef = Math.max(1.3, ef + (0.1 - (5 - quality) * (0.08 + (5 - quality) * 0.02)));
         }
 
-        card.setRepetitions(repetitions);
-        card.setInterval(interval);
-        card.setEasinessFactor(ef);
-
-        card.setLastReview(LocalDate.now());
-        card.setNextReview(LocalDate.now().plusDays(interval));
+        review.setRepetitions(repetitions);
+        review.setInterval(interval);
+        review.setEasinessFactor(ef);
+        review.setLastReview(LocalDate.now());
+        review.setNextReview(LocalDate.now().plusDays(interval));
     }
 
-    //IMPLEMENTAÇÃO DA LÓGICA "DIFICULDADE & INTERVALO" NA CARTA
-    public Card reviewCard(Long cardId, int quality){
-        Card card = cardRepository.findById(cardId)
-                .orElseThrow(() -> new RuntimeException("Card not found"));
-
-        processReview(card, quality);
-        return cardRepository.save(card);
+    private CardReview createReviewIfMissing(Long userId, Card card) {
+        return cardReviewRepository.findByUserIdAndCardId(userId, card.getId()).orElseGet(() -> {
+            User user = userRepository.findById(userId)
+                    .orElseThrow(() -> new EntityNotFoundException("User not found"));
+            CardReview review = new CardReview();
+            review.setUser(user);
+            review.setCard(card);
+            review.setInterval(1);
+            review.setEasinessFactor(2.5);
+            review.setNextReview(LocalDate.now());
+            return cardReviewRepository.save(review);
+        });
     }
 
-    public List<Card> getDueCards(Long deckId){
-        return cardRepository.findByDeckIdAndNextReviewLessThanEqual(deckId, LocalDate.now());
+    private Deck findDeck(Long deckId) {
+        return deckRepository.findById(deckId)
+                .orElseThrow(() -> new EntityNotFoundException("Deck not found"));
+    }
+
+    private Card findCard(Long cardId) {
+        return cardRepository.findById(cardId)
+                .orElseThrow(() -> new EntityNotFoundException("Card not found"));
+    }
+
+    private void ensureInDeck(Deck deck, Card card) {
+        if (deck.getCards().stream().noneMatch(item -> item.getId().equals(card.getId()))) {
+            throw new IllegalArgumentException("This card does not belong to this deck");
+        }
     }
 
     private boolean isValidDictionaryWord(String word) {
-
-        if (word == null || word.isBlank()) return false;
-
-        word = word.trim();
-
-        // Se tiver espaços, não é palavra
-        if (word.contains(" ")) return false;
-
-        // Apenas letras (sem números, acentos, hífens, etc)
-        return word.matches("^[a-zA-Z]+$");
+        return word != null && !word.isBlank() && !word.trim().contains(" ")
+                && word.trim().matches("^[a-zA-Z]+$");
     }
-
 }

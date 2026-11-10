@@ -27,8 +27,13 @@ public class Deck {
     @Column(length = 50)
     private String color;
 
-    @OneToMany(mappedBy = "deck", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<Card> cards;
+    @ManyToMany
+    @JoinTable(
+            name = "deck_cards",
+            joinColumns = @JoinColumn(name = "deck_id"),
+            inverseJoinColumns = @JoinColumn(name = "card_id")
+    )
+    private List<Card> cards = new java.util.ArrayList<>();
 
     @ManyToOne
     @JoinColumn(name = "user_id")

@@ -27,7 +27,6 @@ public class DeckService {
         deck.setColor(request.color());
         deck.setUser(user);
 
-
         deckRepository.save(deck);
         return new DeckResponseDTO(deck.getId(), deck.getName(), deck.getColor(), null);
     }
@@ -75,4 +74,5 @@ public class DeckService {
 
         deckRepository.delete(deck);
     }
+
 }
