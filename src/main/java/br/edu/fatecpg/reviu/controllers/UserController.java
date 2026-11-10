@@ -4,6 +4,7 @@ import br.edu.fatecpg.reviu.domain.user.Friendship;
 import br.edu.fatecpg.reviu.domain.user.User;
 import br.edu.fatecpg.reviu.dto.requests.ChangePasswordDTO;
 import br.edu.fatecpg.reviu.dto.responses.FriendResponseDTO;
+import br.edu.fatecpg.reviu.dto.responses.FriendRequestResponseDTO;
 import br.edu.fatecpg.reviu.dto.responses.UserResponseDTO;
 import br.edu.fatecpg.reviu.repositories.FriendshipRepository;
 import br.edu.fatecpg.reviu.repositories.UserRepository;
@@ -113,6 +114,39 @@ public class UserController {
 
         List<FriendResponseDTO> friends = acceptedFriends.values().stream()
                 .map(FriendResponseDTO::new)
+                .toList();
+
+        return ResponseEntity.ok(friends);
+    }
+
+    @GetMapping("/friends/requests")
+    @Operation(
+            summary = "Lista os pedidos de amizade pendentes do usuário autenticado",
+            description = "Retorna os pedidos de amizade pendentes, indicando se foram enviados ou recebidos pelo usuário autenticado."
+    )
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Amigos retornados com sucesso"),
+            @ApiResponse(responseCode = "401", description = "Usuário não autenticado")
+    })
+    public ResponseEntity<List<FriendRequestResponseDTO>> getFriendRequests() {
+        User authenticatedUser = (User) SecurityContextHolder.getContext()
+                .getAuthentication()
+                .getPrincipal();
+
+        Map<Long, Friendship> pendingFriends = new LinkedHashMap<>();
+        Stream.concat(
+                        friendshipRepository.findPendingFriendsAsUser(authenticatedUser.getId()).stream(),
+                        friendshipRepository.findPendingFriendsAsFriend(authenticatedUser.getId()).stream()
+                )
+                .forEach(friendship -> {
+                    User otherUser = friendship.getUser().getId().equals(authenticatedUser.getId())
+                            ? friendship.getFriend()
+                            : friendship.getUser();
+                    pendingFriends.putIfAbsent(otherUser.getId(), friendship);
+                });
+
+        List<FriendRequestResponseDTO> friends = pendingFriends.values().stream()
+                .map(friendship -> new FriendRequestResponseDTO(friendship, authenticatedUser.getId()))
                 .toList();
 
         return ResponseEntity.ok(friends);
@@ -281,4 +315,6 @@ public class UserController {
 
         return ResponseEntity.ok("Amizade desfeita com sucesso!");
     }
+
+
 }
