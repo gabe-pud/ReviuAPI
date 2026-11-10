@@ -156,6 +156,7 @@ Acesse o Swagger em:
 - `GET /` — Listar baralhos  
 - `PUT /{deckId}` — Atualizar nome  
 - `DELETE /{deckId}` — Excluir baralho  
+- `POST /{deckId}/members/{memberId}` — Criar um baralho do destinatário com as mesmas cartas
 
 ### 🃏 Cartões (`/decks/{deckId}/cards`)
 - `POST /` — Criar cartão  

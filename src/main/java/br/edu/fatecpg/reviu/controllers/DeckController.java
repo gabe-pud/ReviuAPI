@@ -87,4 +87,20 @@ public class DeckController {
         return ResponseEntity.noContent().build();
 
     }
+
+    @PostMapping("/{deckId}/members/{memberId}")
+    @Operation(summary = "Cria um deck para outro usuário usando as mesmas cartas")
+    @ApiResponses({
+            @ApiResponse(responseCode = "204", description = "Deck compartilhado com sucesso"),
+            @ApiResponse(responseCode = "404", description = "Deck ou usuário destinatário não encontrado"),
+            @ApiResponse(responseCode = "403", description = "Usuário autenticado não é o proprietário do deck")
+    })
+    public ResponseEntity<Void> shareDeck(
+            @AuthenticationPrincipal User user,
+            @PathVariable Long deckId,
+            @PathVariable Long memberId
+    ) {
+        deckService.shareDeck(user.getId(), deckId, memberId);
+        return ResponseEntity.noContent().build();
+    }
 }

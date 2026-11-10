@@ -8,6 +8,7 @@ import br.edu.fatecpg.reviu.repositories.DeckRepository;
 import br.edu.fatecpg.reviu.repositories.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
@@ -75,4 +76,21 @@ public class DeckService {
         deckRepository.delete(deck);
     }
 
+    @Transactional
+    public void shareDeck(Long ownerId, Long deckId, Long memberId) {
+        Deck sourceDeck = deckRepository.findById(deckId)
+                .orElseThrow(() -> new RuntimeException("Deck not found"));
+        if (!sourceDeck.getUser().getId().equals(ownerId)) {
+            throw new IllegalArgumentException("Only the deck owner can share it");
+        }
+        User recipient = userRepository.findById(memberId)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        Deck sharedDeck = new Deck();
+        sharedDeck.setName(sourceDeck.getName());
+        sharedDeck.setColor(sourceDeck.getColor());
+        sharedDeck.setUser(recipient);
+        sharedDeck.getCards().addAll(sourceDeck.getCards());
+        deckRepository.save(sharedDeck);
+    }
 }
