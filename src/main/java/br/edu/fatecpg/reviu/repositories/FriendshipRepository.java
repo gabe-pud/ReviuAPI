@@ -28,4 +28,27 @@ public interface FriendshipRepository extends JpaRepository<Friendship, Long> {
     List<User> findAcceptedFriendsAsFriend(
             @Param("userId") Long userId
     );
+
+    @Query("""
+            SELECT f
+            FROM Friendship f
+            WHERE (f.user = :user AND f.friend = :friend)
+               OR (f.user = :friend AND f.friend = :user)
+            """)
+    java.util.Optional<Friendship> findFriendshipBetween(
+            @Param("user") User user,
+            @Param("friend") User friend
+    );
+
+    @Query("""
+            SELECT f
+            FROM Friendship f
+            WHERE f.user.id = :senderId
+              AND f.friend.id = :receiverId
+              AND f.status = 'PENDING'
+            """)
+    java.util.Optional<Friendship> findPendingRequest(
+            @Param("senderId") Long senderId,
+            @Param("receiverId") Long receiverId
+    );
 }

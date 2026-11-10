@@ -133,7 +133,7 @@ O front-end completo da aplicação está aqui:
 - `POST /reset-password` — Redefine senha  
 
 ### 👤 Usuário (`/user`)
-- `PUT /change-password` — Alterar senha  
+- `PUT /change-password` — Alterar senha 
 
 ### 🗂 Baralhos (`/decks`)
 - `POST /` — Criar baralho  

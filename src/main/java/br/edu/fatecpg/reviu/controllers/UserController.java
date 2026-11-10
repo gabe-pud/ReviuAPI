@@ -1,5 +1,6 @@
 package br.edu.fatecpg.reviu.controllers;
 
+import br.edu.fatecpg.reviu.domain.user.Friendship;
 import br.edu.fatecpg.reviu.domain.user.User;
 import br.edu.fatecpg.reviu.dto.requests.ChangePasswordDTO;
 import br.edu.fatecpg.reviu.dto.responses.FriendResponseDTO;
@@ -115,5 +116,169 @@ public class UserController {
                 .toList();
 
         return ResponseEntity.ok(friends);
+    }
+
+    @PostMapping("/friends/request/{friendId}")
+    @Operation(
+            summary = "Enviar pedido de amizade",
+            description = "Envia um pedido de amizade para outro usuário utilizando o ID dele."
+    )
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Pedido enviado com sucesso"),
+            @ApiResponse(responseCode = "400", description = "Regra de negócio violada (ex: auto-adição, usuário não verificado, ou relação existente)"),
+            @ApiResponse(responseCode = "404", description = "Usuário destino não encontrado")
+    })
+    public ResponseEntity<?> sendFriendRequest(@PathVariable Long friendId) {
+        // 1. Pega o usuário logado
+        User authenticatedUser = (User) SecurityContextHolder.getContext()
+                .getAuthentication().getPrincipal();
+
+        // 2. Impede o usuário de adicionar a si mesmo
+        if (authenticatedUser.getId().equals(friendId)) {
+            return ResponseEntity.badRequest().body("Você não pode enviar um pedido de amizade para si mesmo.");
+        }
+
+        // 3. Busca o usuário que vai receber o pedido (Corrigindo o erro 403)
+        var targetUserOpt = userRepository.findById(friendId);
+        if (targetUserOpt.isEmpty()) {
+            return ResponseEntity.status(404).body("Usuário não encontrado.");
+        }
+        User targetUser = targetUserOpt.get();
+
+        // 4. Impede envio de pedido para usuários que não confirmaram o e-mail (Sua sugestão)
+        if (!targetUser.getVerified()) {
+            return ResponseEntity.badRequest().body("Não é possível enviar pedido de amizade para uma conta não verificada.");
+        }
+
+        // 5. Verifica se já existe um pedido ou amizade entre os dois
+        var existingFriendship = friendshipRepository.findFriendshipBetween(authenticatedUser, targetUser);
+        if (existingFriendship.isPresent()) {
+            return ResponseEntity.badRequest().body("Já existe uma relação de amizade ou pedido pendente com este usuário.");
+        }
+
+        // 6. Cria e salva o pedido com status PENDING
+        Friendship friendship = new Friendship();
+        friendship.setUser(authenticatedUser);
+        friendship.setFriend(targetUser);
+        friendship.setStatus("PENDING");
+
+        friendshipRepository.save(friendship);
+
+        return ResponseEntity.ok("Pedido de amizade enviado com sucesso!");
+    }
+
+    @PutMapping("/friends/request/{senderId}/accept")
+    @Operation(
+            summary = "Aceitar pedido de amizade",
+            description = "Aceita um pedido de amizade pendente enviado por outro usuário."
+    )
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Pedido aceito com sucesso"),
+            @ApiResponse(responseCode = "400", description = "Nenhum pedido pendente encontrado deste usuário"),
+    })
+    public ResponseEntity<?> acceptFriendRequest(@PathVariable Long senderId) {
+        // 1. Pega o usuário logado (quem está recebendo e aceitando o pedido)
+        User authenticatedUser = (User) SecurityContextHolder.getContext()
+                .getAuthentication().getPrincipal();
+
+        // 2. Busca o pedido pendente onde o senderId é quem enviou e o logado é quem recebeu
+        var friendshipOpt = friendshipRepository.findPendingRequest(senderId, authenticatedUser.getId());
+
+        if (friendshipOpt.isEmpty()) {
+            return ResponseEntity.badRequest().body("Nenhum pedido de amizade pendente encontrado para este usuário.");
+        }
+
+        // 3. Atualiza o status para ACCEPTED
+        Friendship friendship = friendshipOpt.get();
+        friendship.setStatus("ACCEPTED");
+
+        friendshipRepository.save(friendship);
+
+        return ResponseEntity.ok("Pedido de amizade aceito com sucesso!");
+    }
+
+    @DeleteMapping("/friends/request/{receiverId}/cancel")
+    @Operation(
+            summary = "Cancelar pedido de amizade",
+            description = "Cancela um pedido de amizade pendente que VOCÊ enviou para outro usuário."
+    )
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Pedido cancelado com sucesso"),
+            @ApiResponse(responseCode = "400", description = "Nenhum pedido pendente enviado para este usuário")
+    })
+    public ResponseEntity<?> cancelFriendRequest(@PathVariable Long receiverId) {
+        User authenticatedUser = (User) SecurityContextHolder.getContext()
+                .getAuthentication().getPrincipal();
+
+        // O usuário logado é o remetente, o target é o destinatário
+        var friendshipOpt = friendshipRepository.findPendingRequest(authenticatedUser.getId(), receiverId);
+
+        if (friendshipOpt.isEmpty()) {
+            return ResponseEntity.badRequest().body("Nenhum pedido de amizade pendente enviado para este usuário.");
+        }
+
+        friendshipRepository.delete(friendshipOpt.get());
+
+        return ResponseEntity.ok("Pedido de amizade cancelado com sucesso!");
+    }
+
+    @DeleteMapping("/friends/request/{senderId}/reject")
+    @Operation(
+            summary = "Recusar pedido de amizade",
+            description = "Recusa um pedido de amizade pendente que outro usuário enviou para VOCÊ."
+    )
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Pedido recusado com sucesso"),
+            @ApiResponse(responseCode = "400", description = "Nenhum pedido pendente recebido deste usuário")
+    })
+    public ResponseEntity<?> rejectFriendRequest(@PathVariable Long senderId) {
+        User authenticatedUser = (User) SecurityContextHolder.getContext()
+                .getAuthentication().getPrincipal();
+
+        // O target é o remetente, o usuário logado é o destinatário
+        var friendshipOpt = friendshipRepository.findPendingRequest(senderId, authenticatedUser.getId());
+
+        if (friendshipOpt.isEmpty()) {
+            return ResponseEntity.badRequest().body("Nenhum pedido de amizade pendente recebido deste usuário.");
+        }
+
+        friendshipRepository.delete(friendshipOpt.get());
+
+        return ResponseEntity.ok("Pedido de amizade recusado com sucesso!");
+    }
+
+    @DeleteMapping("/friends/{friendId}/unfriend")
+    @Operation(
+            summary = "Desfazer amizade",
+            description = "Remove uma amizade existente (status ACCEPTED) com outro usuário."
+    )
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Amizade desfeita com sucesso"),
+            @ApiResponse(responseCode = "400", description = "Vocês não possuem uma amizade ativa"),
+            @ApiResponse(responseCode = "404", description = "Usuário não encontrado")
+    })
+    public ResponseEntity<?> unfriend(@PathVariable Long friendId) {
+        User authenticatedUser = (User) SecurityContextHolder.getContext()
+                .getAuthentication().getPrincipal();
+
+        // 1. Busca o usuário que será removido da lista de amigos
+        var targetUserOpt = userRepository.findById(friendId);
+        if (targetUserOpt.isEmpty()) {
+            return ResponseEntity.status(404).body("Usuário não encontrado.");
+        }
+        User targetUser = targetUserOpt.get();
+
+        // 2. Busca qualquer relação existente entre os dois usando o método do primeiro passo
+        var friendshipOpt = friendshipRepository.findFriendshipBetween(authenticatedUser, targetUser);
+
+        // 3. Valida se a relação existe E se o status é de amizade aceita
+        if (friendshipOpt.isEmpty() || !friendshipOpt.get().getStatus().equals("ACCEPTED")) {
+            return ResponseEntity.badRequest().body("Vocês não possuem uma amizade ativa.");
+        }
+
+        // 4. Deleta o registro para desfazer a amizade
+        friendshipRepository.delete(friendshipOpt.get());
+
+        return ResponseEntity.ok("Amizade desfeita com sucesso!");
     }
 }
