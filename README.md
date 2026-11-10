@@ -20,6 +20,7 @@ Este repositório contém todo o backend da aplicação, desenvolvido em **Java 
 - CRUD completo de **Baralhos** e **Cartões**
 - Criação em massa de cartões
 - Sistema de **repetição espaçada (Machine Learning & SRS – Algoritmo SM-2)**
+- Cards são compartilháveis entre decks e o progresso de revisão é individual por usuário
 - Revisões com notas de 0 a 5
 - Cold start para o modelo de aprendizado de máquina possuir dados para realizar as previsões exclusivas de repetições de cards para cada usuário
 
@@ -155,6 +156,7 @@ Acesse o Swagger em:
 - `GET /` — Listar baralhos  
 - `PUT /{deckId}` — Atualizar nome  
 - `DELETE /{deckId}` — Excluir baralho  
+- `POST /{deckId}/members/{memberId}` — Criar um baralho do destinatário com as mesmas cartas
 
 ### 🃏 Cartões (`/decks/{deckId}/cards`)
 - `POST /` — Criar cartão  
