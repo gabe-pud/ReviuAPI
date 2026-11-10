@@ -14,6 +14,9 @@ public record DeckResponseDTO(
         @Schema(description = "Nome do deck", example = "Deck de Matemática")
         String name,
 
+        @Schema(description = "Cor do deck", example = "#4F46E5")
+        String color,
+
         @Schema(description = "Lista de cards pertencentes ao deck")
         List<CardResponseDTO> cards
 
@@ -22,6 +25,7 @@ public record DeckResponseDTO(
         this(
                 deck.getId(),
                 deck.getName(),
+                deck.getColor(),
                 deck.getCards() != null
                         ? deck.getCards().stream().map(CardResponseDTO::new).toList()
                         : List.of()

@@ -9,6 +9,9 @@ public record DeckRequestDTO(
         Long id,
 
         @Schema(description = "Nome do deck", example = "Deck de Matemática")
-        String name
+        String name,
+
+        @Schema(description = "Cor do deck", example = "#4F46E5")
+        String color
 
 ) {}
