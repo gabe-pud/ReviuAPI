@@ -1,8 +1,11 @@
 
 # 🚀 Reviu Backend
 
-Reviu é uma aplicação poderosa e inteligente de **flashcards com repetição espaçada**, projetada para otimizar seu aprendizado através do algoritmo SM-2.  
-Este repositório contém todo o backend da aplicação, desenvolvido em **Java + Spring Boot**, com suporte a IA, mídia e infraestrutura em nuvem.
+Reviu é uma aplicação inteligente de **flashcards com repetição espaçada**, que combina **Machine Learning e o algoritmo SM-2** para otimizar e personalizar a experiência de aprendizado.
+
+A aplicação utiliza modelos de Machine Learning hospedados na **Microsoft Azure** para analisar informações e padrões de desempenho dos usuários, permitindo recomendações de revisão mais precisas e adaptadas ao ritmo de aprendizado individual. Como mecanismo de contingência, o algoritmo **SM-2** assume o gerenciamento das revisões caso o serviço de Machine Learning fique indisponível.
+
+Este repositório contém todo o backend da aplicação, desenvolvido em **Java + Spring Boot**, com integração a serviços de IA, gerenciamento de mídia e infraestrutura em nuvem.
 
 ---
 
@@ -16,8 +19,9 @@ Este repositório contém todo o backend da aplicação, desenvolvido em **Java 
 ### 📚 Gestão de Conteúdo
 - CRUD completo de **Baralhos** e **Cartões**
 - Criação em massa de cartões
-- Sistema de **repetição espaçada (SRS – Algoritmo SM-2)**
+- Sistema de **repetição espaçada (Machine Learning & SRS – Algoritmo SM-2)**
 - Revisões com notas de 0 a 5
+- Cold start para o modelo de aprendizado de máquina possuir dados para realizar as previsões exclusivas de repetições de cards para cada usuário
 
 ### 🤖 Recursos com IA
 - Geração automática de flashcards enviando um **PDF**
@@ -28,7 +32,7 @@ Este repositório contém todo o backend da aplicação, desenvolvido em **Java 
 - Busca automática de áudio de pronúncia via Dictionary.com
 
 ### ☁️ Infraestrutura em Nuvem
-- Cloudinary para armazenamento
+- Cloudinary e Azure para armazenamento
 - Swagger/OpenAPI para documentação interativa
 
 ---
@@ -42,7 +46,7 @@ Este repositório contém todo o backend da aplicação, desenvolvido em **Java 
 | **Banco de Dados** | PostgreSQL |
 | **Segurança** | Spring Security + JWT |
 | **Build** | Maven |
-| **Nuvem** | Cloudinary, Gemini AI |
+| **Nuvem** | Azure, Cloudinary, Gemini AI |
 | **Utilitários** | Lombok, PDFBox, JavaMail Sender |
 | **Docs** | SpringDoc Swagger |
 
@@ -96,13 +100,22 @@ CLOUDINARY_API_SECRET=
 GEMINI_API_KEY=sua_chave
 ```
 
+#### 🔸 Postgres
+```
+POSTGRES_DB=
+POSTGRES_USER=
+POSTGRES_PASSWORD=
+```
 ---
 
 ### ▶ 3. Inicie o servidor
 ```bash
 ./mvnw spring-boot:run
 ```
-
+ou
+```bash
+.\mvnw.cmd spring-boot:run "-Dspring-boot.run.profiles=local"
+```
 Servidor iniciado em: **http://localhost:8080**
 
 ---
@@ -115,25 +128,27 @@ Acesse o Swagger em:
 
 ---
 
-# 🎨 Repositório do Front-End  
-O front-end completo da aplicação está aqui:
-
-👉 **https://github.com/gabe-pud/reviu**
-
----
-
 # 📡 Visão Geral dos Endpoints
 
 ### 🔑 Autenticação (`/auth`)
 - `POST /login` — Login + JWT  
 - `POST /register` — Cadastro  
-- `POST /verify` — Verificação de código  
-- `POST /resend-verification` — Reenvio  
-- `POST /forgot-password` — Solicita código  
-- `POST /reset-password` — Redefine senha  
+- `POST /verify` — Verificação de código enviado para o e-mail para ativar a conta do usuário
+- `POST /resend-verification` — Reenvio da verificação para o e-mail
+- `POST /forgot-password` — Solicita código de redefinição de senha
+- `POST /reset-password` — Redefine a senha
 
 ### 👤 Usuário (`/user`)
 - `PUT /change-password` — Alterar senha 
+- `PUT /user/friends/request/{senderId}/accept` — Aceitar pedido de amizade
+- `PUT /user/change-password` — Altera a senha do usuário
+- `POST /user/friends/request/{friendId}` — Enviar pedido de amizade
+- `GET /user/info` — Obtém informações do usuário
+- `GET /user/friends` — Lista os amigos do usuário autenticado
+- `GET /user/friends/requests` — Lista os pedidos de amizades pendentes do usuário autenticado
+- `DELETE /user/friends/{friendId}/unfriend` — Desfazer amizade
+- `DELETE /user/friends/request/{senderId}/reject` — Recusar pedido de amizade
+- `DELETE /user/friends/request/{receiverId}/cancel` — Cancelar pedido de amizade
 
 ### 🗂 Baralhos (`/decks`)
 - `POST /` — Criar baralho  
@@ -156,13 +171,25 @@ O front-end completo da aplicação está aqui:
 
 # 🏅 Créditos
 
-Desenvolvido por:  
-✨ **Thiago de Almeida**  
-✨ **Levi Ferreira**  
+**Desenvolvido por:**
 
-Com colaboração de:  
-🎨 **Gabriel Garcia**  
-🎨 **André Luiz** 
-(Equipe de Front-End)
+✨ **Thiago de Almeida**<br>
+✨ **Levi Ferreira**<br>
+✨ **Gabriel Garcia**<br>
+🎨 **André Luiz**
+
+**(Equipe de Front-End)**<br>
+🎨 **André Luiz**
+
+**(Design e prototipação no Figma)**<br>
+✨ **Thiago de Almeida**
+
+**(Machine Learning)**<br>
+✨ **Thiago de Almeida**
+
+**(Equipe de Back-End)**<br>
+✨ **Thiago de Almeida**<br>
+✨ **Levi Ferreira**<br>
+✨ **Gabriel Garcia**
 
 ---
