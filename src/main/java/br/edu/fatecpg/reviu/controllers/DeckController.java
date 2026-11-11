@@ -3,6 +3,7 @@ package br.edu.fatecpg.reviu.controllers;
 import br.edu.fatecpg.reviu.domain.user.User;
 import br.edu.fatecpg.reviu.dto.requests.DeckRequestDTO;
 import br.edu.fatecpg.reviu.dto.responses.DeckResponseDTO;
+import br.edu.fatecpg.reviu.dto.responses.DeckShareRequestResponseDTO;
 import br.edu.fatecpg.reviu.services.DeckService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -88,19 +89,61 @@ public class DeckController {
 
     }
 
-    @PostMapping("/{deckId}/members/{memberId}")
-    @Operation(summary = "Cria um deck para outro usuário usando as mesmas cartas")
+    @PostMapping("/{deckId}/share-requests/{recipientId}")
+    @Operation(summary = "Envia um pedido de compartilhamento do deck")
     @ApiResponses({
-            @ApiResponse(responseCode = "204", description = "Deck compartilhado com sucesso"),
+            @ApiResponse(responseCode = "202", description = "Pedido de compartilhamento enviado"),
             @ApiResponse(responseCode = "404", description = "Deck ou usuário destinatário não encontrado"),
             @ApiResponse(responseCode = "403", description = "Usuário autenticado não é o proprietário do deck")
     })
     public ResponseEntity<Void> shareDeck(
             @AuthenticationPrincipal User user,
             @PathVariable Long deckId,
-            @PathVariable Long memberId
+            @PathVariable Long recipientId
     ) {
-        deckService.shareDeck(user.getId(), deckId, memberId);
+        deckService.shareDeck(user.getId(), deckId, recipientId);
+        return ResponseEntity.status(HttpStatus.ACCEPTED).build();
+    }
+
+    @GetMapping("/share-requests")
+    @Operation(summary = "Lista pedidos de compartilhamento pendentes")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Pedidos de compartilhamento retornados com sucesso"),
+            @ApiResponse(responseCode = "401", description = "Usuário não autenticado")
+    })
+    public ResponseEntity<List<DeckShareRequestResponseDTO>> getPendingShareRequests(
+            @AuthenticationPrincipal User user
+    ) {
+        return ResponseEntity.ok(deckService.getPendingShareRequests(user.getId()));
+    }
+
+    @PutMapping("/share-requests/{requestId}/accept")
+    @Operation(summary = "Aceita um pedido de compartilhamento")
+    @ApiResponses({
+            @ApiResponse(responseCode = "204", description = "Pedido aceito e cópia do deck criada com sucesso"),
+            @ApiResponse(responseCode = "400", description = "Pedido de compartilhamento não encontrado ou não está pendente"),
+            @ApiResponse(responseCode = "401", description = "Usuário não autenticado")
+    })
+    public ResponseEntity<Void> acceptShareRequest(
+            @AuthenticationPrincipal User user,
+            @PathVariable Long requestId
+    ) {
+        deckService.acceptShareRequest(user.getId(), requestId);
+        return ResponseEntity.noContent().build();
+    }
+
+    @DeleteMapping("/share-requests/{requestId}")
+    @Operation(summary = "Recusa um pedido de compartilhamento")
+    @ApiResponses({
+            @ApiResponse(responseCode = "204", description = "Pedido recusado com sucesso"),
+            @ApiResponse(responseCode = "400", description = "Pedido de compartilhamento não encontrado ou não está pendente"),
+            @ApiResponse(responseCode = "401", description = "Usuário não autenticado")
+    })
+    public ResponseEntity<Void> rejectShareRequest(
+            @AuthenticationPrincipal User user,
+            @PathVariable Long requestId
+    ) {
+        deckService.rejectShareRequest(user.getId(), requestId);
         return ResponseEntity.noContent().build();
     }
 }

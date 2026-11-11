@@ -164,7 +164,10 @@ Acesse o Swagger em:
 - `GET /` — Listar baralhos  
 - `PUT /{deckId}` — Atualizar nome  
 - `DELETE /{deckId}` — Excluir baralho  
-- `POST /{deckId}/members/{memberId}` — Criar um baralho do destinatário com as mesmas cartas
+- `POST /{deckId}/share-requests/{recipientId}` — Enviar um pedido de compartilhamento do deck
+- `GET /share-requests` — Listar pedidos de compartilhamento pendentes
+- `PUT /share-requests/{requestId}/accept` — Aceitar um pedido e criar a cópia do deck
+- `DELETE /share-requests/{requestId}` — Recusar um pedido de compartilhamento
 
 ### 🃏 Cartões (`/decks/{deckId}/cards`)
 - `POST /` — Criar cartão  
