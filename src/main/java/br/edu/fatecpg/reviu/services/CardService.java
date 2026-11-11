@@ -173,7 +173,15 @@ public class CardService {
         SimpleClientHttpRequestFactory requestFactory = new SimpleClientHttpRequestFactory();
         requestFactory.setConnectTimeout(Duration.ofSeconds(4));
         requestFactory.setReadTimeout(Duration.ofSeconds(4));
-        return new RestTemplate(requestFactory);
+
+        RestTemplate restTemplate = new RestTemplate(requestFactory);
+        restTemplate.getInterceptors()
+        .add((request, body, execution) -> {
+            request.getHeaders().set("Accept", "application/json");
+            request.getHeaders().set("X-API-Key", "${ML_API_KEY}");
+            return execution.execute(request, body);
+        });
+        return restTemplate;
     }
 
     private record MlIntervalRequest(
