@@ -1,10 +1,12 @@
 package br.edu.fatecpg.reviu.controllers;
 
 import br.edu.fatecpg.reviu.domain.user.User;
+import br.edu.fatecpg.reviu.domain.user.UserOnboarding;
 import br.edu.fatecpg.reviu.domain.user.VerificationCodes;
 import br.edu.fatecpg.reviu.dto.requests.*;
 import br.edu.fatecpg.reviu.dto.responses.LoginAndRegisterResponseDTO;
 import br.edu.fatecpg.reviu.infra.security.TokenService;
+import br.edu.fatecpg.reviu.repositories.UserOnboardingRepository;
 import br.edu.fatecpg.reviu.repositories.UserRepository;
 import br.edu.fatecpg.reviu.repositories.VerificationCodesRepository;
 import br.edu.fatecpg.reviu.services.AuthService;
@@ -23,12 +25,14 @@ import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.Optional;
 
+
 @RestController
 @RequestMapping("/auth")
 @RequiredArgsConstructor
 @Tag(name = "Autenticação", description = "Endpoints responsáveis pela autenticação, registro e verificação de usuários.")
 public class AuthController {
 
+    private final UserOnboardingRepository onboardingRepository;
     private final UserRepository userRepository;
     private final EmailService emailService;
     private final AuthService authService;
@@ -70,6 +74,17 @@ public class AuthController {
 
             this.userRepository.save(newUser);
 
+            UserOnboarding onboarding = new UserOnboarding();
+            onboarding.setUser(newUser);
+            onboarding.setFocoEstudos(body.focoEstudos());
+            onboarding.setPrazoFinal(body.prazoFinal());
+            onboarding.setMetaDiaria(body.metaDiaria());
+            onboarding.setHorarioFoco(body.horarioFoco());
+            onboarding.setRetencaoConteudo(body.retencaoConteudo());
+            onboarding.setRitmoRevisao(body.ritmoRevisao());
+
+            onboardingRepository.save(onboarding);
+
             String code = authService.generateCode();
 
             verificationCodesRepository
@@ -77,8 +92,7 @@ public class AuthController {
                             null,
                             code,
                             Instant.now().plus(1, ChronoUnit.HOURS),
-                            newUser
-                    ));
+                            newUser));
 
             emailService.sendVerificationEmail(newUser);
             return ResponseEntity.ok("Verifique seu e-mail");
@@ -121,7 +135,7 @@ public class AuthController {
         user.setVerified(true);
         userRepository.save(user);
         verificationCodesRepository.delete(verificationCode);
-        
+
         String token = this.tokenService.generateToken(user);
         return ResponseEntity.ok(new LoginAndRegisterResponseDTO(user.getName(), token));
     }
@@ -157,10 +171,8 @@ public class AuthController {
                             null,
                             newCode,
                             Instant.now().plus(1, ChronoUnit.HOURS),
-                            user
-                    ));
-        }
-        else {
+                            user));
+        } else {
             verificationCode = optionalVerificationCode.get();
 
             verificationCode.setCode(newCode);
@@ -191,8 +203,7 @@ public class AuthController {
                         null,
                         code,
                         Instant.now().plus(1, ChronoUnit.HOURS),
-                        user
-                ));
+                        user));
 
         emailService.sendForgotPasswordEmail(user);
         return ResponseEntity.ok("Código de redefinição de senha enviado para o seu e-mail.");
