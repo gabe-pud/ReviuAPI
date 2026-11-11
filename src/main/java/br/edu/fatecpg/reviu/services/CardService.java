@@ -10,17 +10,28 @@ import br.edu.fatecpg.reviu.repositories.CardRepository;
 import br.edu.fatecpg.reviu.repositories.CardReviewRepository;
 import br.edu.fatecpg.reviu.repositories.DeckRepository;
 import br.edu.fatecpg.reviu.repositories.UserRepository;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.ResponseEntity;
+import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestTemplate;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Duration;
 import java.time.LocalDate;
 import java.util.List;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class CardService {
+    private static final String ML_INTERVAL_ENDPOINT =
+            "https://reviu-ml-api-ebewfmfhcqe3fkdw.brazilsouth-01.azurewebsites.net/prever_intervalo";
+    private static final RestTemplate ML_REST_TEMPLATE = createMlRestTemplate();
+
     private final CardRepository cardRepository;
     private final CardReviewRepository cardReviewRepository;
     private final DeckRepository deckRepository;
@@ -97,7 +108,9 @@ public class CardService {
         Card card = findCard(cardId);
         CardReview review = cardReviewRepository.findByUserIdAndCardId(userId, cardId)
                 .orElseGet(() -> createReviewIfMissing(userId, card));
-        processReview(review, quality);
+        if (!processReviewWithML(review, quality)) {
+            processReview(review, quality);
+        }
         return cardReviewRepository.save(review);
     }
 
@@ -113,6 +126,72 @@ public class CardService {
 
     public CardReview getReview(Long cardId, Long userId) {
         return cardReviewRepository.findByUserIdAndCardId(userId, cardId).orElse(null);
+    }
+
+    private boolean processReviewWithML(CardReview review, int quality) {
+        try {
+            var onboarding = review.getUser().getOnboarding();
+            if (onboarding == null) {
+                throw new IllegalStateException("User onboarding is not available");
+            }
+
+            MlIntervalRequest request = new MlIntervalRequest(
+                    onboarding.getFocoEstudos(),
+                    onboarding.getPrazoFinal(),
+                    onboarding.getMetaDiaria(),
+                    onboarding.getHorarioFoco(),
+                    onboarding.getRetencaoConteudo(),
+                    onboarding.getRitmoRevisao(),
+                    review.getRepetitions(),
+                    review.getEasinessFactor(),
+                    quality
+            );
+            ResponseEntity<MlIntervalResponse> response = ML_REST_TEMPLATE.postForEntity(
+                    ML_INTERVAL_ENDPOINT, request, MlIntervalResponse.class);
+
+            if (response.getStatusCode().value() != 200
+                    || response.getBody() == null
+                    || response.getBody().proximoIntervaloDias() == null
+                    || response.getBody().proximoIntervaloDias() <= 0) {
+                throw new IllegalStateException("ML API returned an invalid interval response");
+            }
+
+            int interval = response.getBody().proximoIntervaloDias();
+            LocalDate today = LocalDate.now();
+            review.setInterval(interval);
+            review.setLastReview(today);
+            review.setNextReview(today.plusDays(interval));
+            review.setRepetitions(review.getRepetitions() + 1);
+            return true;
+        } catch (Exception exception) {
+            log.warn("ML interval prediction failed; using SM-2 fallback", exception);
+            return false;
+        }
+    }
+
+    private static RestTemplate createMlRestTemplate() {
+        SimpleClientHttpRequestFactory requestFactory = new SimpleClientHttpRequestFactory();
+        requestFactory.setConnectTimeout(Duration.ofSeconds(4));
+        requestFactory.setReadTimeout(Duration.ofSeconds(4));
+        return new RestTemplate(requestFactory);
+    }
+
+    private record MlIntervalRequest(
+            @JsonProperty("foco_estudos") String focoEstudos,
+            @JsonProperty("prazo_final") String prazoFinal,
+            @JsonProperty("meta_diaria") String metaDiaria,
+            @JsonProperty("horario_foco") String horarioFoco,
+            @JsonProperty("retencao_conteudo") String retencaoConteudo,
+            @JsonProperty("ritmo_revisao") String ritmoRevisao,
+            @JsonProperty("repeticoes_anteriores") int repeticoesAnteriores,
+            @JsonProperty("facilidade_atual") double facilidadeAtual,
+            @JsonProperty("nota_revisao") int notaRevisao
+    ) {
+    }
+
+    private record MlIntervalResponse(
+            @JsonProperty("proximo_intervalo_dias") Integer proximoIntervaloDias
+    ) {
     }
 
     private void processReview(CardReview review, int quality) {

@@ -2,11 +2,14 @@ package br.edu.fatecpg.reviu.controllers;
 
 import br.edu.fatecpg.reviu.domain.user.Friendship;
 import br.edu.fatecpg.reviu.domain.user.User;
+import br.edu.fatecpg.reviu.domain.user.UserOnboarding;
 import br.edu.fatecpg.reviu.dto.requests.ChangePasswordDTO;
+import br.edu.fatecpg.reviu.dto.requests.OnboardingRequestDTO;
 import br.edu.fatecpg.reviu.dto.responses.FriendResponseDTO;
 import br.edu.fatecpg.reviu.dto.responses.FriendRequestResponseDTO;
 import br.edu.fatecpg.reviu.dto.responses.UserResponseDTO;
 import br.edu.fatecpg.reviu.repositories.FriendshipRepository;
+import br.edu.fatecpg.reviu.repositories.UserOnboardingRepository;
 import br.edu.fatecpg.reviu.repositories.UserRepository;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -40,6 +43,9 @@ public class UserController {
 
     @Autowired
     private FriendshipRepository friendshipRepository;
+
+    @Autowired
+    private UserOnboardingRepository onboardingRepository;
 
     @PutMapping("/change-password")
     @Operation(
@@ -315,6 +321,24 @@ public class UserController {
 
         return ResponseEntity.ok("Amizade desfeita com sucesso!");
     }
+    
+    @PutMapping("/onboarding")
+    @Operation(summary = "Atualizar configuração de onboarding", description = "Atualiza as preferências do algoritmo de repetição espaçada do usuário.")
+    public ResponseEntity<?> updateOnboarding(@RequestBody OnboardingRequestDTO dto) {
+        User authenticatedUser = (User) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
 
+        UserOnboarding onboarding = onboardingRepository.findByUserId(authenticatedUser.getId())
+                .orElseThrow(() -> new RuntimeException("Onboarding não encontrado para este usuário."));
+
+        onboarding.setFocoEstudos(dto.focoEstudos());
+        onboarding.setPrazoFinal(dto.prazoFinal());
+        onboarding.setMetaDiaria(dto.metaDiaria());
+        onboarding.setHorarioFoco(dto.horarioFoco());
+        onboarding.setRetencaoConteudo(dto.retencaoConteudo());
+        onboarding.setRitmoRevisao(dto.ritmoRevisao());
+
+        onboardingRepository.save(onboarding);
+        return ResponseEntity.ok("Onboarding atualizado com sucesso!");
+    }
 
 }
