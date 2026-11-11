@@ -10,11 +10,15 @@ import br.edu.fatecpg.reviu.services.GeminiAiService;
 import br.edu.fatecpg.reviu.services.PDFService;
 import br.edu.fatecpg.reviu.services.UploadService;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -170,29 +174,35 @@ public class CardController {
         return ResponseEntity.ok(response);
     }
 
-    @PostMapping("/generate-from-file")
+    @PostMapping(
+            value = "/generate-from-file",
+            consumes = MediaType.MULTIPART_FORM_DATA_VALUE
+    )
     @Operation(
             summary = "Gera cartas a partir de um arquivo PDF",
             description = "Extrai o texto de um PDF enviado e gera cartas automaticamente utilizando IA."
     )
-    @io.swagger.v3.oas.annotations.parameters.RequestBody(
-            description = "Arquivo PDF contendo o conteúdo para gerar cartas.",
-            required = true,
-            content = @io.swagger.v3.oas.annotations.media.Content(
-                    mediaType = "application/pdf",
-                    schema = @io.swagger.v3.oas.annotations.media.Schema(type = "string", format = "binary")
-            )
-    )
     @ApiResponses({
+            @ApiResponse(responseCode = "503", description = "Serviço de IA indisponível, tente novamente mais tarde"),
             @ApiResponse(responseCode = "200", description = "Cartas geradas com sucesso a partir do PDF"),
             @ApiResponse(responseCode = "400", description = "Arquivo inválido ou falha na extração do texto")
     })
-    public ResponseEntity<String> generateFromPdf(@RequestParam("file") MultipartFile file) {
+    public ResponseEntity<String> generateFromPdf(
+            @Parameter(
+                    name = "file",
+                    description = "Arquivo PDF",
+                    required = true,
+                    content = @Content(
+                            mediaType = MediaType.APPLICATION_PDF_VALUE,
+                            schema = @Schema(type = "string", format = "binary")
+                    )
+            )
+            @RequestPart("file") MultipartFile file) {
         String text = pdfService.extractText(file);
         String jsonCards = geminiAiService.createCards(text);
 
         return ResponseEntity.ok()
-                .header("Content-Type", "application/json")
+                .contentType(MediaType.APPLICATION_JSON)
                 .body(jsonCards);
     }
 }
