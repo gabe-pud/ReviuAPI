@@ -150,6 +150,7 @@ Acesse o Swagger em:
 - `PUT /user/change-password` — Altera a senha do usuário
 - `POST /user/friends/request/{friendId}` — Enviar pedido de amizade
 - `GET /user/info` — Obtém informações do usuário
+- `GET /user/search?username={username}` — Pesquisa usuários por username
 - `GET /user/friends` — Lista os amigos do usuário autenticado
 - `GET /user/friends/requests` — Lista os pedidos de amizades pendentes do usuário autenticado
 - `DELETE /user/friends/{friendId}/unfriend` — Desfazer amizade
