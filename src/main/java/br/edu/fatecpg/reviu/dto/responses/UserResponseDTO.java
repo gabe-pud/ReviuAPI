@@ -9,6 +9,9 @@ import io.swagger.v3.oas.annotations.media.Schema;
 )
 public record UserResponseDTO(
 
+        @Schema(description = "Identificador do usuário", example = "1")
+        Long id,
+
         @Schema(description = "Nome do usuário", example = "Thiago Almeida")
         String name,
 
@@ -27,6 +30,7 @@ public record UserResponseDTO(
 ) {
     public UserResponseDTO(User user) {
         this(
+                user.getId(),
                 user.getName(),
                 user.getUsername(),
                 user.getEmail(),

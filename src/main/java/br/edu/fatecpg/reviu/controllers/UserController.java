@@ -97,6 +97,23 @@ public class UserController {
         return ResponseEntity.ok(new UserResponseDTO(user));
     }
 
+    @GetMapping("/search")
+    @Operation(
+            summary = "Pesquisa um usuário por username",
+            description = "Retorna os dados públicos dos usuários cujo username contém o termo pesquisado."
+    )
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Pesquisa realizada com sucesso")
+    })
+    public ResponseEntity<List<UserResponseDTO>> searchByUsername(@RequestParam String username) {
+        List<UserResponseDTO> users = userRepository.findByUsernameContainingIgnoreCase(username)
+                .stream()
+                .map(UserResponseDTO::new)
+                .toList();
+
+        return ResponseEntity.ok(users);
+    }
+
     @GetMapping("/friends")
     @Operation(
             summary = "Lista os amigos do usuário autenticado",

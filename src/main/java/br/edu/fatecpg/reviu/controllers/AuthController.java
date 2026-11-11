@@ -61,43 +61,49 @@ public class AuthController {
     @Operation(summary = "Registra um novo usuário", description = "Cria um novo usuário no sistema, envia o código de verificação por e-mail e retorna uma mensagem de confirmação.")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Registro realizado com sucesso, verifique seu e-mail"),
-            @ApiResponse(responseCode = "400", description = "E-mail já cadastrado ou dados inválidos")
+            @ApiResponse(responseCode = "400", description = "E-mail ou nome de usuário já cadastrado, ou dados inválidos")
     })
     public ResponseEntity<?> register(@Valid @RequestBody RegisterRequestDTO body) {
         Optional<User> user = this.userRepository.findByEmail(body.email());
-        if (user.isEmpty()) {
-            User newUser = new User();
-            newUser.setPassword(passwordEncoder.encode(body.password()));
-            newUser.setEmail(body.email());
-            newUser.setName(body.name());
-            newUser.setUsername(body.username());
-
-            this.userRepository.save(newUser);
-
-            UserOnboarding onboarding = new UserOnboarding();
-            onboarding.setUser(newUser);
-            onboarding.setFocoEstudos(body.focoEstudos());
-            onboarding.setPrazoFinal(body.prazoFinal());
-            onboarding.setMetaDiaria(body.metaDiaria());
-            onboarding.setHorarioFoco(body.horarioFoco());
-            onboarding.setRetencaoConteudo(body.retencaoConteudo());
-            onboarding.setRitmoRevisao(body.ritmoRevisao());
-
-            onboardingRepository.save(onboarding);
-
-            String code = authService.generateCode();
-
-            verificationCodesRepository
-                    .save(new VerificationCodes(
-                            null,
-                            code,
-                            Instant.now().plus(1, ChronoUnit.HOURS),
-                            newUser));
-
-            emailService.sendVerificationEmail(newUser);
-            return ResponseEntity.ok("Verifique seu e-mail");
+        if (user.isPresent()) {
+            return ResponseEntity.badRequest().body("E-mail já cadastrado.");
         }
-        return ResponseEntity.badRequest().build();
+
+        Optional<User> userWithUsername = this.userRepository.findByUsername(body.username());
+        if (userWithUsername.isPresent()) {
+            return ResponseEntity.badRequest().body("Nome de usuário já cadastrado.");
+        }
+
+        User newUser = new User();
+        newUser.setPassword(passwordEncoder.encode(body.password()));
+        newUser.setEmail(body.email());
+        newUser.setName(body.name());
+        newUser.setUsername(body.username());
+
+        this.userRepository.save(newUser);
+
+        UserOnboarding onboarding = new UserOnboarding();
+        onboarding.setUser(newUser);
+        onboarding.setFocoEstudos(body.focoEstudos());
+        onboarding.setPrazoFinal(body.prazoFinal());
+        onboarding.setMetaDiaria(body.metaDiaria());
+        onboarding.setHorarioFoco(body.horarioFoco());
+        onboarding.setRetencaoConteudo(body.retencaoConteudo());
+        onboarding.setRitmoRevisao(body.ritmoRevisao());
+
+        onboardingRepository.save(onboarding);
+
+        String code = authService.generateCode();
+
+        verificationCodesRepository
+                .save(new VerificationCodes(
+                        null,
+                        code,
+                        Instant.now().plus(1, ChronoUnit.HOURS),
+                        newUser));
+
+        emailService.sendVerificationEmail(newUser);
+        return ResponseEntity.ok("Verifique seu e-mail");
     }
 
     @PostMapping("/verify")
