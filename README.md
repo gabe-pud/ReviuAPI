@@ -96,6 +96,11 @@ CLOUDINARY_API_KEY=
 CLOUDINARY_API_SECRET=
 ```
 
+#### 🔸 Cloudinary
+```
+CORS_URLS=
+```
+
 #### 🔸 Gemini AI
 ```
 GEMINI_API_KEY=sua_chave
@@ -150,6 +155,9 @@ Acesse o Swagger em:
 - `DELETE /user/friends/{friendId}/unfriend` — Desfazer amizade
 - `DELETE /user/friends/request/{senderId}/reject` — Recusar pedido de amizade
 - `DELETE /user/friends/request/{receiverId}/cancel` — Cancelar pedido de amizade
+- `PUT /user/onboarding` — Atualizar configuração de onboarding
+
+
 
 ### 🗂 Baralhos (`/decks`)
 - `POST /` — Criar baralho  
@@ -181,17 +189,17 @@ Acesse o Swagger em:
 🎨 **André Luiz**
 
 **(Equipe de Front-End)**<br>
-🎨 **André Luiz**
+**André Luiz**
 
 **(Design e prototipação no Figma)**<br>
-✨ **Thiago de Almeida**
+**Thiago de Almeida**
 
 **(Machine Learning)**<br>
-✨ **Thiago de Almeida**
+**Thiago de Almeida**
 
 **(Equipe de Back-End)**<br>
-✨ **Thiago de Almeida**<br>
-✨ **Levi Ferreira**<br>
-✨ **Gabriel Garcia**
+**Thiago de Almeida**<br>
+**Levi Ferreira**<br>
+**Gabriel Garcia**
 
 ---
