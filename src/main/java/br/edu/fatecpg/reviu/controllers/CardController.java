@@ -139,17 +139,28 @@ public class CardController {
                .map(card -> new CardResponseDTO(card, cardService.getReview(card.getId(), user.getId()))).toList());
     }
 
-    @PostMapping(value = "/upload", consumes = "multipart/form-data")
+    @PostMapping(value = "/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @Operation(
             summary = "Realiza upload de arquivos",
-            description = "Envia uma imagem ou áudio e retorna a URL gerada no armazenamento em nuvem."
+            description = "Envia uma imagem ou áudio e retorna a URL para usar no campo imageUrl do card."
     )
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Upload realizado com sucesso"),
             @ApiResponse(responseCode = "400", description = "Arquivo inválido"),
             @ApiResponse(responseCode = "500", description = "Erro ao fazer upload")
     })
-    public ResponseEntity<UploadResponseDTO> upload(@RequestParam MultipartFile file) throws IOException {
+    public ResponseEntity<UploadResponseDTO> upload(
+            @Parameter(
+                    name = "file",
+                    description = "Imagem ou áudio a enviar",
+                    required = true,
+                    content = @Content(
+                            mediaType = MediaType.APPLICATION_OCTET_STREAM_VALUE,
+                            schema = @Schema(type = "string", format = "binary")
+                    )
+            )
+            @RequestPart("file") MultipartFile file
+    ) throws IOException {
         String url = uploadService.uploadFile(file);
         return ResponseEntity.ok(new UploadResponseDTO(url));
     }
