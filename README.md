@@ -96,7 +96,7 @@ CLOUDINARY_API_KEY=
 CLOUDINARY_API_SECRET=
 ```
 
-#### 🔸 Cloudinary
+#### 🔸 Cors
 ```
 CORS_URLS=
 ```
@@ -106,11 +106,9 @@ CORS_URLS=
 GEMINI_API_KEY=sua_chave
 ```
 
-#### 🔸 Postgres
+#### 🔸 ML_API_KEY
 ```
-POSTGRES_DB=
-POSTGRES_USER=
-POSTGRES_PASSWORD=
+ML_API_KEY=
 ```
 ---
 
@@ -123,6 +121,35 @@ ou
 .\mvnw.cmd spring-boot:run "-Dspring-boot.run.profiles=local"
 ```
 Servidor iniciado em: **http://localhost:8080**
+
+---
+
+## 💻 Como rodar com .env no VS Code (Recomendado)
+
+Para evitar colocar senhas sensíveis no application.properties e correr o risco de enviá-las para o GitHub, você pode usar um arquivo .env e rodar o projeto diretamente pelo Run and Debug do VS Code.
+
+1. Crie um arquivo .env na raiz do projeto com as suas variáveis (ex: DB_URL=...).
+
+2. Adicione o .env ao seu arquivo .gitignore.
+
+3. Crie ou edite o arquivo .vscode/launch.json adicionando a propriedade "envFile":
+
+```bash
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "java",
+            "name": "ReviuApplication",
+            "request": "launch",
+            "mainClass": "br.edu.fatecpg.reviu.ReviuApplication",
+            "projectName": "reviu",
+            "envFile": "${workspaceFolder}/.env"
+        }
+    ]
+}
+```
+Vá na aba Run and Debug do VS Code, selecione ReviuApplication e clique no play para iniciar o servidor.
 
 ---
 
@@ -157,8 +184,6 @@ Acesse o Swagger em:
 - `DELETE /user/friends/request/{senderId}/reject` — Recusar pedido de amizade
 - `DELETE /user/friends/request/{receiverId}/cancel` — Cancelar pedido de amizade
 - `PUT /user/onboarding` — Atualizar configuração de onboarding
-
-
 
 ### 🗂 Baralhos (`/decks`)
 - `POST /` — Criar baralho  
