@@ -33,7 +33,7 @@ Este repositório contém todo o backend da aplicação, desenvolvido em **Java 
 - Busca automática de áudio de pronúncia via Dictionary.com
 
 ### ☁️ Infraestrutura em Nuvem
-- Cloudinary e Azure para armazenamento
+- Azure Blob Storage para armazenamento de imagens e áudios
 - Swagger/OpenAPI para documentação interativa
 
 ---
@@ -47,7 +47,7 @@ Este repositório contém todo o backend da aplicação, desenvolvido em **Java 
 | **Banco de Dados** | PostgreSQL |
 | **Segurança** | Spring Security + JWT |
 | **Build** | Maven |
-| **Nuvem** | Azure, Cloudinary, Gemini AI |
+| **Nuvem** | Azure Blob Storage, Gemini AI |
 | **Utilitários** | Lombok, PDFBox, JavaMail Sender |
 | **Docs** | SpringDoc Swagger |
 
@@ -89,12 +89,11 @@ EMAIL=seu_email@gmail.com
 EMAIL_PASSWORD=sua_senha_de_app
 ```
 
-#### 🔸 Cloudinary
+#### 🔸 Azure Blob Storage
 ```
-CLOUDINARY_CLOUD_NAME=
-CLOUDINARY_API_KEY=
-CLOUDINARY_API_SECRET=
+AZURE_STORAGE_CONNECTION_STRING=
 ```
+O container utilizado é `reviu-app-images`. Para que as URLs devolvidas pela API sejam acessíveis diretamente, configure o container com acesso de leitura anônima a blobs no Azure.
 
 #### 🔸 Cors
 ```

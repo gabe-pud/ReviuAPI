@@ -18,9 +18,8 @@ services:
       spring.mail.username: ${EMAIL}
       spring.mail.password: ${EMAIL_PASSWORD}
 
-      cloudinary.cloud.name: ${CLOUDINARY_CLOUD_NAME}
-      cloudinary.api.key: ${CLOUDINARY_API_KEY}
-      cloudinary.api.secret: ${CLOUDINARY_API_SECRET}
+      azure.storage.connection-string: ${AZURE_STORAGE_CONNECTION_STRING}
+      azure.storage.container-name: reviu-app-images
 
       gemini.api.key: ${GEMINI_API_KEY}
 

@@ -21,7 +21,7 @@ public record UserResponseDTO(
         @Schema(description = "E-mail do usuário", example = "thiago@example.com")
         String email,
 
-        @Schema(description = "URL da imagem de perfil", example = "https://res.cloudinary.com/demo/image/upload/profile.jpg")
+        @Schema(description = "URL da imagem de perfil", example = "https://conta.blob.core.windows.net/reviu-app-images/profile.jpg")
         String profileImageUrl,
 
         @Schema(description = "Indica se o e-mail do usuário foi verificado", example = "true")
